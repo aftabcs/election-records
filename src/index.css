@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, 'Noto Sans Devanagari', sans-serif;
+  background-color: #eef1f6;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.devanagari {
+  font-family: 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif;
+}
