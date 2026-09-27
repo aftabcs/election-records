@@ -2,11 +2,12 @@
  * Form 20 import: parse an Excel/CSV of booth-wise results into the store shape.
  * Lazy-loads xlsx so it stays out of the initial bundle.
  *
- * Columns (header row): Booth, Village, Year, then one column PER PARTY holding
- * that party's vote count for that booth+year. One row per booth×year:
- *   Booth | Village | Year | INC | BJP | BSP | Others
+ * Columns (header row): Booth, Name (booth name, optional), Village, Year, then
+ * one column PER PARTY holding that party's vote count for that booth+year.
+ * One row per booth×year:
+ *   Booth | Name | Village | Year | INC | BJP | BSP | Others
  */
-const RESERVED = new Set(['booth', 'village', 'year'])
+const RESERVED = new Set(['booth', 'name', 'boothname', 'village', 'year'])
 
 export async function parseElectionFile(file) {
   const XLSX = await import('xlsx')
@@ -20,6 +21,7 @@ export async function parseElectionFile(file) {
     for (const row of json) {
       const keys = Object.fromEntries(Object.keys(row).map((k) => [k.trim().toLowerCase(), k]))
       const booth = String(row[keys['booth']] ?? '').trim()
+      const name = String(row[keys['name']] ?? row[keys['boothname']] ?? '').trim()
       const village = String(row[keys['village']] ?? '').trim()
       const year = String(row[keys['year']] ?? '').trim()
       if (!booth || !year) { skipped++; continue }
@@ -32,9 +34,10 @@ export async function parseElectionFile(file) {
       }
       if (!Object.keys(votes).length) { skipped++; continue }
 
-      if (!boothMap.has(booth)) boothMap.set(booth, { booth, village, years: {} })
+      if (!boothMap.has(booth)) boothMap.set(booth, { booth, name, village, years: {} })
       const rec = boothMap.get(booth)
       if (village && !rec.village) rec.village = village
+      if (name && !rec.name) rec.name = name
       rec.years[year] = votes
       rows++
     }
@@ -46,13 +49,13 @@ export async function parseElectionFile(file) {
 export async function downloadElectionTemplate() {
   const XLSX = await import('xlsx')
   const aoa = [
-    ['Booth', 'Village', 'Year', 'INC', 'BJP', 'BSP', 'Others'],
-    ['Booth 1', 'Vaidya', 2017, 320, 430, 60, 30],
-    ['Booth 1', 'Vaidya', 2022, 470, 420, 40, 20],
-    ['Booth 2', 'Vaidya', 2017, 320, 560, 40, 20],
+    ['Booth', 'Name', 'Village', 'Year', 'INC', 'BJP', 'BSP', 'Others'],
+    ['Booth 1', 'Govt Primary School Naugaon', 'Vaidya', 2017, 320, 430, 60, 30],
+    ['Booth 1', 'Govt Primary School Naugaon', 'Vaidya', 2022, 470, 420, 40, 20],
+    ['Booth 2', 'Govt Primary School Goda', 'Vaidya', 2017, 320, 560, 40, 20],
   ]
   const ws = XLSX.utils.aoa_to_sheet(aoa)
-  ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }]
+  ws['!cols'] = [{ wch: 12 }, { wch: 26 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Form20')
   XLSX.writeFile(wb, 'form20-template.xlsx')

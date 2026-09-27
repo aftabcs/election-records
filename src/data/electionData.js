@@ -10,11 +10,16 @@
 export const PARTY_META = {
   INC: { label: 'Congress', color: '#12306e' },
   BJP: { label: 'BJP', color: '#f26a1b' },
-  BSP: { label: 'BSP', color: '#2563eb' },
   AAP: { label: 'AAP', color: '#1a7f5a' },
+  BSP: { label: 'BSP', color: '#2563eb' },
   SP: { label: 'SP', color: '#e11d48' },
+  UKD: { label: 'UKD', color: '#7c3aed' },
   Others: { label: 'Others', color: '#64748b' },
 }
+
+// Parties kept as their own column; everything else (minor parties, NOTA, etc.)
+// is folded into "Others".
+export const MAJOR_PARTIES = ['INC', 'BJP', 'AAP', 'BSP', 'SP', 'UKD']
 
 export const ELECTION_SEED = [
   { booth: 'Booth 1', village: 'Vaidya', years: {

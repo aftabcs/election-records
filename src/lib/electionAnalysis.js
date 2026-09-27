@@ -2,27 +2,45 @@
  * Booth-level election analysis: derive per-year winners + margins from raw
  * vote counts, and classify each booth as swing / consistent (safe) / leaning.
  */
-import { PARTY_META } from '../data/electionData.js'
+import { PARTY_META, MAJOR_PARTIES } from '../data/electionData.js'
 
 const MARGIN_THRESHOLD = 10 // % — below this, a "consistent" booth is "leaning"
 
 export const partyLabel = (key) => PARTY_META[key]?.label || key
 export const partyColor = (key) => PARTY_META[key]?.color || '#94a3b8'
 
-/** All party keys present anywhere in the data set (for table columns). */
+/** Collapse a year's raw votes to major parties + a single "Others" bucket. */
+export function normalizeVotes(votes) {
+  const out = {}
+  let others = 0
+  for (const [p, v] of Object.entries(votes || {})) {
+    const n = Number(v) || 0
+    if (MAJOR_PARTIES.includes(p)) out[p] = (out[p] || 0) + n
+    else others += n
+  }
+  if (others) out.Others = others
+  return out
+}
+
+/** Columns to show: major parties present in the data (in canonical order) + Others. */
 export function allParties(records) {
-  const set = new Set()
-  for (const b of records) for (const y of Object.values(b.years || {})) Object.keys(y).forEach((p) => set.add(p))
-  const known = Object.keys(PARTY_META).filter((k) => set.has(k))
-  const extras = [...set].filter((k) => !PARTY_META[k])
-  return [...known, ...extras]
+  const present = new Set()
+  let hasOthers = false
+  for (const b of records) {
+    for (const y of Object.values(b.years || {})) {
+      const n = normalizeVotes(y)
+      Object.keys(n).forEach((p) => { if (p === 'Others') hasOthers = true; else present.add(p) })
+    }
+  }
+  const majors = MAJOR_PARTIES.filter((k) => present.has(k))
+  return hasOthers ? [...majors, 'Others'] : majors
 }
 
 /** Per-year ranking + winner + margin for one booth, plus its classification. */
 export function analyzeBooth(booth) {
   const years = Object.keys(booth.years || {}).sort()
   const perYear = years.map((year) => {
-    const votes = booth.years[year] || {}
+    const votes = normalizeVotes(booth.years[year] || {})
     const ranking = Object.entries(votes)
       .map(([party, v]) => ({ party, votes: Number(v) || 0 }))
       .sort((a, b) => b.votes - a.votes)
@@ -47,6 +65,13 @@ export function analyzeBooth(booth) {
   else if (minMarginPct < MARGIN_THRESHOLD) tag = 'leaning'
 
   return { years, perYear, winners, flipped, minMarginPct, dominantParty, tag }
+}
+
+/** Colour the winner↔runner-up gap: knife-edge (<5%) → close (<10%) → comfortable. */
+export function marginTone(pct) {
+  if (pct < 5) return { bg: 'bg-rose-100', text: 'text-rose-700', dot: '#e11d48', level: 'tight' }
+  if (pct < 10) return { bg: 'bg-amber-100', text: 'text-amber-700', dot: '#f5b70a', level: 'close' }
+  return { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: '#2f9e44', level: 'safe' }
 }
 
 export const TAG_META = {
